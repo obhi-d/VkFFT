@@ -586,13 +586,15 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
                         }
                         if(axis->referenceLUT == 0){
 #if(VKFFT_BACKEND==0)
-							resFFT = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
-							if (resFFT != VKFFT_SUCCESS) {
+							
+							res = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, &axis->bufferLUTOffset, &axis->bufferLUTUserData, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
+							if (res != VK_SUCCESS) {
 								deleteVkFFT(app);
 								free(tempLUT);
 								tempLUT = 0;
 								return resFFT;
 							}
+							
 							resFFT = VkFFT_TransferDataFromCPU(app, tempLUT, &axis->bufferLUT, axis->bufferLUTSize);
 							if (resFFT != VKFFT_SUCCESS) {
 								deleteVkFFT(app);
@@ -884,8 +886,8 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
                         }
                         if(axis->referenceLUT == 0){
 #if(VKFFT_BACKEND==0)
-							resFFT = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
-							if (resFFT != VKFFT_SUCCESS) {
+							res = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, &axis->bufferLUTOffset, &axis->bufferLUTUserData, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
+							if (res != VK_SUCCESS) {
 								deleteVkFFT(app);
 								free(tempLUT);
 								tempLUT = 0;
@@ -1181,8 +1183,8 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
                         }
                         if(axis->referenceLUT == 0){
 #if(VKFFT_BACKEND==0)
-							resFFT = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
-							if (resFFT != VKFFT_SUCCESS) {
+							res = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, &axis->bufferLUTOffset, &axis->bufferLUTUserData, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
+							if (res != VK_SUCCESS) {
 								deleteVkFFT(app);
 								free(tempLUT);
 								tempLUT = 0;
@@ -1313,8 +1315,8 @@ static inline VkFFTResult VkFFT_AllocateRaderUintLUT(VkFFTApplication* app, VkFF
 			}
 
 #if(VKFFT_BACKEND==0)
-			resFFT = allocateBufferVulkan(app, &app->bufferRaderUintLUT[axis->specializationConstants.axis_id][axis->specializationConstants.axis_upload_id], &app->bufferRaderUintLUTDeviceMemory[axis->specializationConstants.axis_id][axis->specializationConstants.axis_upload_id], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, app->bufferRaderUintLUTSize[axis->specializationConstants.axis_id][axis->specializationConstants.axis_upload_id]);
-			if (resFFT != VKFFT_SUCCESS) {
+			res = allocateBufferVulkan(app, &app->bufferRaderUintLUT[axis->specializationConstants.axis_id][axis->specializationConstants.axis_upload_id], &app->bufferRaderUintLUTDeviceMemory[axis->specializationConstants.axis_id][axis->specializationConstants.axis_upload_id], &app->bufferRaderUintLUTOffset[axis->specializationConstants.axis_id][axis->specializationConstants.axis_upload_id], &app->bufferRaderUintLUTUserData[axis->specializationConstants.axis_id][axis->specializationConstants.axis_upload_id], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, app->bufferRaderUintLUTSize[axis->specializationConstants.axis_id][axis->specializationConstants.axis_upload_id]);
+			if (res != VK_SUCCESS) {
 				deleteVkFFT(app);
 				free(tempRaderUintLUT);
 				tempRaderUintLUT = 0;
@@ -1466,8 +1468,8 @@ static inline VkFFTResult VkFFT_AllocateLUT_R2C(VkFFTApplication* app, VkFFTPlan
 			}
 			else {
 #if(VKFFT_BACKEND==0)
-				resFFT = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
-				if (resFFT != VKFFT_SUCCESS) {
+				res = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, &axis->bufferLUTOffset, &axis->bufferLUTUserData, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
+				if (res != VK_SUCCESS) {
 					deleteVkFFT(app);
 					free(tempLUT);
 					tempLUT = 0;
@@ -1574,8 +1576,8 @@ static inline VkFFTResult VkFFT_AllocateLUT_R2C(VkFFTApplication* app, VkFFTPlan
 			}
 			else {
 #if(VKFFT_BACKEND==0)
-				resFFT = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
-				if (resFFT != VKFFT_SUCCESS) {
+				res = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, &axis->bufferLUTOffset, &axis->bufferLUTUserData, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
+				if (res != VK_SUCCESS) {
 					deleteVkFFT(app);
 					free(tempLUT);
 					tempLUT = 0;
@@ -1682,8 +1684,8 @@ static inline VkFFTResult VkFFT_AllocateLUT_R2C(VkFFTApplication* app, VkFFTPlan
 			}
 			else {
 #if(VKFFT_BACKEND==0)
-				resFFT = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
-				if (resFFT != VKFFT_SUCCESS) {
+				res = allocateBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, &axis->bufferLUTOffset, &axis->bufferLUTUserData, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, axis->bufferLUTSize);
+				if (res != VK_SUCCESS) {
 					deleteVkFFT(app);
 					free(tempLUT);
 					tempLUT = 0;

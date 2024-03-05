@@ -35,6 +35,7 @@
 #if(VKFFT_BACKEND==0)
 #include "vulkan/vulkan.h"
 #include "glslang_c_interface.h"
+#include "vkFFT_UserFunctions.h"
 #elif(VKFFT_BACKEND==1)
 #include <nvrtc.h>
 #include <cuda.h>
@@ -103,6 +104,7 @@ typedef struct {
 	VkQueue* queue;//pointer to Vulkan queue, created with vkGetDeviceQueue
 	VkCommandPool* commandPool;//pointer to Vulkan command pool, created with vkCreateCommandPool
 	VkFence* fence;//pointer to Vulkan fence, created with vkCreateFence
+
 	pfUINT isCompilerInitialized;//specify if glslang compiler has been intialized before (0 - off, 1 - on). Default 0
 #elif(VKFFT_BACKEND==1)
 	CUdevice* device;//pointer to CUDA device, obtained from cuDeviceGet
@@ -150,6 +152,7 @@ typedef struct {
 	VkBuffer* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
 	VkBuffer* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
 	VkBuffer* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
+	void* tempBufferUserData;
 #elif(VKFFT_BACKEND==1)
 	void** buffer;//pointer to device buffer used for computations
 	void** tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same size as buffer. Default 0. Setting to non zero value enables manual user allocation
@@ -193,6 +196,7 @@ typedef struct {
 	VkPipelineCache* pipelineCache;//pointer to Vulkan pipeline cache
 	VkBuffer* stagingBuffer;//pointer to the user defined staging buffer (used internally for LUT data transfers)
 	VkDeviceMemory* stagingBufferMemory;//pointer to the user defined staging buffer memory, associated with the stagingBuffer (used internally for LUT data transfers)
+	VkDeviceSize* stagingBufferMemoryOffset;
 #endif
 	pfUINT coalescedMemory;//in bytes, for Nvidia and AMD is equal to 32, Intel is equal 64, scaled for half precision. Gonna work regardles, but if specified by user correctly, the performance will be higher.
 	pfUINT aimThreads;//aim at this many threads per block. Default 128
@@ -301,6 +305,7 @@ typedef struct {
 	pfUINT useRaderUintLUT; // allocate additional LUT to store g_pow
 	pfUINT vendorID; // vendorID 0x10DE - NVIDIA, 0x8086 - Intel, 0x1002 - AMD, etc.
 #if(VKFFT_BACKEND==0)
+	VkDeviceSize tempBufferDeviceMemoryOffset;
 	VkDeviceMemory tempBufferDeviceMemory;//Filled at app creation
 	VkCommandBuffer* commandBuffer;//Filled at app execution
 	VkMemoryBarrier* memory_barrier;//Filled at app creation
@@ -1050,8 +1055,12 @@ typedef struct {
 	VkDescriptorSet descriptorSet;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline pipeline;
+	
+	void* bufferLUTUserData;
+	VkDeviceSize bufferLUTOffset;
 	VkDeviceMemory bufferLUTDeviceMemory;
 	VkBuffer bufferLUT;
+
 	VkDeviceMemory bufferRaderUintLUTDeviceMemory;
 	VkBuffer bufferRaderUintLUT;
 	VkDeviceMemory* bufferBluesteinDeviceMemory;
@@ -1128,7 +1137,7 @@ typedef struct {
 	VkFFTAxis R2Cdecomposition;
 	VkFFTAxis inverseBluesteinAxes[VKFFT_MAX_FFT_DIMENSIONS][4];
 } VkFFTPlan;
-typedef struct {
+typedef struct VkFFTApplication_t {
 	VkFFTConfiguration configuration;
 	VkFFTPlan* localFFTPlan;
 	VkFFTPlan* localFFTPlan_inverse; //additional inverse plan
@@ -1139,11 +1148,22 @@ typedef struct {
 	//Bluestein buffers reused among plans
 	pfUINT useBluesteinFFT[VKFFT_MAX_FFT_DIMENSIONS];
 #if(VKFFT_BACKEND==0)
+	VkFFTUserFunctions dispatcher; //Customization point for vulkan functions
+
 	VkDeviceMemory bufferRaderUintLUTDeviceMemory[VKFFT_MAX_FFT_DIMENSIONS][4];
 	VkBuffer bufferRaderUintLUT[VKFFT_MAX_FFT_DIMENSIONS][4];
+	VkDeviceSize bufferRaderUintLUTOffset[VKFFT_MAX_FFT_DIMENSIONS][4];
+	void* bufferRaderUintLUTUserData[VKFFT_MAX_FFT_DIMENSIONS][4];
+
 	VkDeviceMemory bufferBluesteinDeviceMemory[VKFFT_MAX_FFT_DIMENSIONS];
 	VkDeviceMemory bufferBluesteinFFTDeviceMemory[VKFFT_MAX_FFT_DIMENSIONS];
 	VkDeviceMemory bufferBluesteinIFFTDeviceMemory[VKFFT_MAX_FFT_DIMENSIONS];
+	VkDeviceSize bufferBluesteinOffset[VKFFT_MAX_FFT_DIMENSIONS];
+	VkDeviceSize bufferBluesteinFFTOffset[VKFFT_MAX_FFT_DIMENSIONS];
+	VkDeviceSize bufferBluesteinIFFTOffset[VKFFT_MAX_FFT_DIMENSIONS];
+	void* bufferBluesteinUserData[VKFFT_MAX_FFT_DIMENSIONS];
+	void* bufferBluesteinFFTUserData[VKFFT_MAX_FFT_DIMENSIONS];
+	void* bufferBluesteinIFFTUserData[VKFFT_MAX_FFT_DIMENSIONS];
 	VkBuffer bufferBluestein[VKFFT_MAX_FFT_DIMENSIONS];
 	VkBuffer bufferBluesteinFFT[VKFFT_MAX_FFT_DIMENSIONS];
 	VkBuffer bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS];

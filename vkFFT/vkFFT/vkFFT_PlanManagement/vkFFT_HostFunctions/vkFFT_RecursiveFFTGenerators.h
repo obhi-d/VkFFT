@@ -40,16 +40,15 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 	if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) bufferSize *= 4;
 	app->bufferBluesteinSize[axis_id] = bufferSize;
 #if(VKFFT_BACKEND==0)
-	VkResult res = VK_SUCCESS;
-	resFFT = allocateBufferVulkan(app, &app->bufferBluestein[axis_id], &app->bufferBluesteinDeviceMemory[axis_id], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
-	if (resFFT != VKFFT_SUCCESS) return resFFT;
+	VkResult res = allocateBufferVulkan(app, &app->bufferBluestein[axis_id], &app->bufferBluesteinDeviceMemory[axis_id], &app->bufferBluesteinOffset[axis_id], &app->bufferBluesteinUserData[axis_id],  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
+	if (res != VK_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 	if (!app->configuration.makeInversePlanOnly) {
-		resFFT = allocateBufferVulkan(app, &app->bufferBluesteinFFT[axis_id], &app->bufferBluesteinFFTDeviceMemory[axis_id], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
-		if (resFFT != VKFFT_SUCCESS) return resFFT;
+		res = allocateBufferVulkan(app, &app->bufferBluesteinFFT[axis_id], &app->bufferBluesteinFFTDeviceMemory[axis_id], &app->bufferBluesteinFFTOffset[axis_id], &app->bufferBluesteinFFTUserData[axis_id], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
+		if (res != VK_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 	}
 	if (!app->configuration.makeForwardPlanOnly) {
-		resFFT = allocateBufferVulkan(app, &app->bufferBluesteinIFFT[axis_id], &app->bufferBluesteinIFFTDeviceMemory[axis_id], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
-		if (resFFT != VKFFT_SUCCESS) return resFFT;
+		res = allocateBufferVulkan(app, &app->bufferBluesteinIFFT[axis_id], &app->bufferBluesteinIFFTDeviceMemory[axis_id], &app->bufferBluesteinIFFTOffset[axis_id], &app->bufferBluesteinIFFTUserData[axis_id], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
+		if (res != VK_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 	}
 #elif(VKFFT_BACKEND==1)
 	cudaError_t res = cudaSuccess;
@@ -376,7 +375,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 				commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 				commandBufferAllocateInfo.commandBufferCount = 1;
 				VkCommandBuffer commandBuffer = VKFFT_ZERO_INIT;
-				res = vkAllocateCommandBuffers(kernelPreparationApplication.configuration.device[0], &commandBufferAllocateInfo, &commandBuffer);
+				res = app->dispatcher.vkAllocateCommandBuffers(kernelPreparationApplication.configuration.device[0], &commandBufferAllocateInfo, &commandBuffer);
 				if (res != 0) {
 					free(phaseVectors);
 					deleteVkFFT(&kernelPreparationApplication);
@@ -384,7 +383,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 				}
 				VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 				commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-				res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+				res = app->dispatcher.vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 				if (res != 0) {
 					free(phaseVectors);
 					deleteVkFFT(&kernelPreparationApplication);
@@ -401,7 +400,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 					deleteVkFFT(&kernelPreparationApplication);
 					return resFFT;
 				}
-				res = vkEndCommandBuffer(commandBuffer);
+				res = app->dispatcher.vkEndCommandBuffer(commandBuffer);
 				if (res != 0) {
 					free(phaseVectors);
 					deleteVkFFT(&kernelPreparationApplication);
@@ -410,25 +409,25 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 				VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 				submitInfo.commandBufferCount = 1;
 				submitInfo.pCommandBuffers = &commandBuffer;
-				res = vkQueueSubmit(kernelPreparationApplication.configuration.queue[0], 1, &submitInfo, kernelPreparationApplication.configuration.fence[0]);
+				res = app->dispatcher.vkQueueSubmit(kernelPreparationApplication.configuration.queue[0], 1, &submitInfo, kernelPreparationApplication.configuration.fence[0]);
 				if (res != 0) {
 					free(phaseVectors);
 					deleteVkFFT(&kernelPreparationApplication);
 					return VKFFT_ERROR_FAILED_TO_SUBMIT_QUEUE;
 				}
-				res = vkWaitForFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence, VK_TRUE, 100000000000);
+				res = app->dispatcher.vkWaitForFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence, VK_TRUE, 100000000000);
 				if (res != 0) {
 					free(phaseVectors);
 					deleteVkFFT(&kernelPreparationApplication);
 					return VKFFT_ERROR_FAILED_TO_WAIT_FOR_FENCES;
 				}
-				res = vkResetFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence);
+				res = app->dispatcher.vkResetFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence);
 				if (res != 0) {
 					free(phaseVectors);
 					deleteVkFFT(&kernelPreparationApplication);
 					return VKFFT_ERROR_FAILED_TO_RESET_FENCES;
 				}
-				vkFreeCommandBuffers(kernelPreparationApplication.configuration.device[0], kernelPreparationApplication.configuration.commandPool[0], 1, &commandBuffer);
+				app->dispatcher.vkFreeCommandBuffers(kernelPreparationApplication.configuration.device[0], kernelPreparationApplication.configuration.commandPool[0], 1, &commandBuffer);
 			}
 #elif(VKFFT_BACKEND==1)
 			VkFFTLaunchParams launchParams = VKFFT_ZERO_INIT;
@@ -634,7 +633,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			commandBufferAllocateInfo.commandBufferCount = 1;
 			VkCommandBuffer commandBuffer = VKFFT_ZERO_INIT;
-			res = vkAllocateCommandBuffers(kernelPreparationApplication.configuration.device[0], &commandBufferAllocateInfo, &commandBuffer);
+			res = app->dispatcher.vkAllocateCommandBuffers(kernelPreparationApplication.configuration.device[0], &commandBufferAllocateInfo, &commandBuffer);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
@@ -642,7 +641,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			}
 			VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 			commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+			res = app->dispatcher.vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
@@ -659,7 +658,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 				deleteVkFFT(&kernelPreparationApplication);
 				return resFFT;
 			}
-			res = vkEndCommandBuffer(commandBuffer);
+			res = app->dispatcher.vkEndCommandBuffer(commandBuffer);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
@@ -668,25 +667,25 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 			submitInfo.commandBufferCount = 1;
 			submitInfo.pCommandBuffers = &commandBuffer;
-			res = vkQueueSubmit(kernelPreparationApplication.configuration.queue[0], 1, &submitInfo, kernelPreparationApplication.configuration.fence[0]);
+			res = app->dispatcher.vkQueueSubmit(kernelPreparationApplication.configuration.queue[0], 1, &submitInfo, kernelPreparationApplication.configuration.fence[0]);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
 				return VKFFT_ERROR_FAILED_TO_SUBMIT_QUEUE;
 			}
-			res = vkWaitForFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence, VK_TRUE, 100000000000);
+			res = app->dispatcher.vkWaitForFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence, VK_TRUE, 100000000000);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
 				return VKFFT_ERROR_FAILED_TO_WAIT_FOR_FENCES;
 			}
-			res = vkResetFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence);
+			res = app->dispatcher.vkResetFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
 				return VKFFT_ERROR_FAILED_TO_RESET_FENCES;
 			}
-			vkFreeCommandBuffers(kernelPreparationApplication.configuration.device[0], kernelPreparationApplication.configuration.commandPool[0], 1, &commandBuffer);
+			app->dispatcher.vkFreeCommandBuffers(kernelPreparationApplication.configuration.device[0], kernelPreparationApplication.configuration.commandPool[0], 1, &commandBuffer);
 		}
 		if ((FFTPlan->numAxisUploads[axis_id] == 1) && (!app->configuration.makeForwardPlanOnly)) {
 			VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -694,7 +693,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			commandBufferAllocateInfo.commandBufferCount = 1;
 			VkCommandBuffer commandBuffer = VKFFT_ZERO_INIT;
-			res = vkAllocateCommandBuffers(kernelPreparationApplication.configuration.device[0], &commandBufferAllocateInfo, &commandBuffer);
+			res = app->dispatcher.vkAllocateCommandBuffers(kernelPreparationApplication.configuration.device[0], &commandBufferAllocateInfo, &commandBuffer);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
@@ -702,7 +701,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			}
 			VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 			commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+			res = app->dispatcher.vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
@@ -719,7 +718,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 				deleteVkFFT(&kernelPreparationApplication);
 				return resFFT;
 			}
-			res = vkEndCommandBuffer(commandBuffer);
+			res = app->dispatcher.vkEndCommandBuffer(commandBuffer);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
@@ -728,25 +727,25 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 			submitInfo.commandBufferCount = 1;
 			submitInfo.pCommandBuffers = &commandBuffer;
-			res = vkQueueSubmit(kernelPreparationApplication.configuration.queue[0], 1, &submitInfo, kernelPreparationApplication.configuration.fence[0]);
+			res = app->dispatcher.vkQueueSubmit(kernelPreparationApplication.configuration.queue[0], 1, &submitInfo, kernelPreparationApplication.configuration.fence[0]);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
 				return VKFFT_ERROR_FAILED_TO_SUBMIT_QUEUE;
 			}
-			res = vkWaitForFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence, VK_TRUE, 100000000000);
+			res = app->dispatcher.vkWaitForFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence, VK_TRUE, 100000000000);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
 				return VKFFT_ERROR_FAILED_TO_WAIT_FOR_FENCES;
 			}
-			res = vkResetFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence);
+			res = app->dispatcher.vkResetFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence);
 			if (res != 0) {
 				free(phaseVectors);
 				deleteVkFFT(&kernelPreparationApplication);
 				return VKFFT_ERROR_FAILED_TO_RESET_FENCES;
 			}
-			vkFreeCommandBuffers(kernelPreparationApplication.configuration.device[0], kernelPreparationApplication.configuration.commandPool[0], 1, &commandBuffer);
+			app->dispatcher.vkFreeCommandBuffers(kernelPreparationApplication.configuration.device[0], kernelPreparationApplication.configuration.commandPool[0], 1, &commandBuffer);
 		}
 #elif(VKFFT_BACKEND==1)
 		VkFFTLaunchParams launchParams = VKFFT_ZERO_INIT;
@@ -1147,8 +1146,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 
 #if(VKFFT_BACKEND==0)
-				VkDeviceMemory bufferRaderFFTDeviceMemory;
-				VkBuffer bufferRaderFFT;
+				VkFFTBuffer bufferRaderFFT;
 #elif(VKFFT_BACKEND==1)
 				void* bufferRaderFFT;
 #elif(VKFFT_BACKEND==2)
@@ -1161,9 +1159,8 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 				MTL::Buffer* bufferRaderFFT;
 #endif
 #if(VKFFT_BACKEND==0)
-				VkResult res = VK_SUCCESS;
-				resFFT = allocateBufferVulkan(app, &bufferRaderFFT, &bufferRaderFFTDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
-				if (resFFT != VKFFT_SUCCESS) return resFFT;
+				VkResult res = app->dispatcher.fnAllocateBuffer(app, &bufferRaderFFT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
+				if (res != VK_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 #elif(VKFFT_BACKEND==1)
 				cudaError_t res = cudaSuccess;
 				res = cudaMalloc(&bufferRaderFFT, bufferSize);
@@ -1188,7 +1185,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 				bufferRaderFFT = app->configuration.device->newBuffer(bufferSize, MTL::ResourceStorageModePrivate);
 #endif
 
-				resFFT = VkFFT_TransferDataFromCPU(app, axis->specializationConstants.raderContainer[i].raderFFTkernel, &bufferRaderFFT, bufferSize);
+				resFFT = VkFFT_TransferDataFromCPU(app, axis->specializationConstants.raderContainer[i].raderFFTkernel, &bufferRaderFFT.buffer, bufferSize);
 				if (resFFT != VKFFT_SUCCESS) {
 					free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
 					deleteVkFFT(&kernelPreparationApplication);
@@ -1201,7 +1198,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 					commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 					commandBufferAllocateInfo.commandBufferCount = 1;
 					VkCommandBuffer commandBuffer = VKFFT_ZERO_INIT;
-					res = vkAllocateCommandBuffers(kernelPreparationApplication.configuration.device[0], &commandBufferAllocateInfo, &commandBuffer);
+					res = app->dispatcher.vkAllocateCommandBuffers(kernelPreparationApplication.configuration.device[0], &commandBufferAllocateInfo, &commandBuffer);
 					if (res != 0) {
 						free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
 						deleteVkFFT(&kernelPreparationApplication);
@@ -1209,7 +1206,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 					}
 					VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 					commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-					res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+					res = app->dispatcher.vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 					if (res != 0) {
 						free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
 						deleteVkFFT(&kernelPreparationApplication);
@@ -1217,7 +1214,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 					}
 					VkFFTLaunchParams launchParams = VKFFT_ZERO_INIT;
 					launchParams.commandBuffer = &commandBuffer;
-					launchParams.buffer = &bufferRaderFFT;
+					launchParams.buffer = &bufferRaderFFT.buffer;
 					//Record commands
 					resFFT = VkFFTAppend(&kernelPreparationApplication, -1, &launchParams);
 					if (resFFT != VKFFT_SUCCESS) {
@@ -1225,7 +1222,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 						deleteVkFFT(&kernelPreparationApplication);
 						return resFFT;
 					}
-					res = vkEndCommandBuffer(commandBuffer);
+					res = app->dispatcher.vkEndCommandBuffer(commandBuffer);
 					if (res != 0) {
 						free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
 						deleteVkFFT(&kernelPreparationApplication);
@@ -1234,25 +1231,25 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 					VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 					submitInfo.commandBufferCount = 1;
 					submitInfo.pCommandBuffers = &commandBuffer;
-					res = vkQueueSubmit(kernelPreparationApplication.configuration.queue[0], 1, &submitInfo, kernelPreparationApplication.configuration.fence[0]);
+					res = app->dispatcher.vkQueueSubmit(kernelPreparationApplication.configuration.queue[0], 1, &submitInfo, kernelPreparationApplication.configuration.fence[0]);
 					if (res != 0) {
 						free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
 						deleteVkFFT(&kernelPreparationApplication);
 						return VKFFT_ERROR_FAILED_TO_SUBMIT_QUEUE;
 					}
-					res = vkWaitForFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence, VK_TRUE, 100000000000);
+					res = app->dispatcher.vkWaitForFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence, VK_TRUE, 100000000000);
 					if (res != 0) {
 						free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
 						deleteVkFFT(&kernelPreparationApplication);
 						return VKFFT_ERROR_FAILED_TO_WAIT_FOR_FENCES;
 					}
-					res = vkResetFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence);
+					res = app->dispatcher.vkResetFences(kernelPreparationApplication.configuration.device[0], 1, kernelPreparationApplication.configuration.fence);
 					if (res != 0) {
 						free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
 						deleteVkFFT(&kernelPreparationApplication);
 						return VKFFT_ERROR_FAILED_TO_RESET_FENCES;
 					}
-					vkFreeCommandBuffers(kernelPreparationApplication.configuration.device[0], kernelPreparationApplication.configuration.commandPool[0], 1, &commandBuffer);
+					app->dispatcher.vkFreeCommandBuffers(kernelPreparationApplication.configuration.device[0], kernelPreparationApplication.configuration.commandPool[0], 1, &commandBuffer);
 				}
 #elif(VKFFT_BACKEND==1)
 				VkFFTLaunchParams launchParams = VKFFT_ZERO_INIT;
@@ -1361,7 +1358,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 				commandEncoder->release();
 				commandBuffer->release();
 #endif
-				resFFT = VkFFT_TransferDataToCPU(&kernelPreparationApplication, axis->specializationConstants.raderContainer[i].raderFFTkernel, &bufferRaderFFT, bufferSize);
+				resFFT = VkFFT_TransferDataToCPU(&kernelPreparationApplication, axis->specializationConstants.raderContainer[i].raderFFTkernel, &bufferRaderFFT.buffer, bufferSize);
 				if (resFFT != VKFFT_SUCCESS) {
 					free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
 					deleteVkFFT(&kernelPreparationApplication);
@@ -1375,8 +1372,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 				if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_RELEASE_COMMAND_QUEUE;
 #endif
 #if(VKFFT_BACKEND==0)
-				vkDestroyBuffer(app->configuration.device[0], bufferRaderFFT, 0);
-				vkFreeMemory(app->configuration.device[0], bufferRaderFFTDeviceMemory, 0);
+				app->dispatcher.fnDestroyBuffer(app, &bufferRaderFFT);
 #elif(VKFFT_BACKEND==1)
 				cudaFree(bufferRaderFFT);
 #elif(VKFFT_BACKEND==2)

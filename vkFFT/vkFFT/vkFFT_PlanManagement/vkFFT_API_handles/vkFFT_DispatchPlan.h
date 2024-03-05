@@ -151,9 +151,9 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 				dispatchSize[2] = (k == blockNumber[2] - 1) ? lastBlockSize[2] : blockSize[2];
 #if(VKFFT_BACKEND==0)
 				if (axis->pushConstants.structSize > 0) {
-					vkCmdPushConstants(app->configuration.commandBuffer[0], axis->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, (uint32_t)axis->pushConstants.structSize, axis->pushConstants.data);
+					app->dispatcher.vkCmdPushConstants(app->configuration.commandBuffer[0], axis->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, (uint32_t)axis->pushConstants.structSize, axis->pushConstants.data);
 				}
-				vkCmdDispatch(app->configuration.commandBuffer[0], (uint32_t)dispatchSize[0], (uint32_t)dispatchSize[1], (uint32_t)dispatchSize[2]);
+				app->dispatcher.vkCmdDispatch(app->configuration.commandBuffer[0], (uint32_t)dispatchSize[0], (uint32_t)dispatchSize[1], (uint32_t)dispatchSize[2]);
 #elif(VKFFT_BACKEND==1)
 				void* args[10];
 				CUresult result = CUDA_SUCCESS;

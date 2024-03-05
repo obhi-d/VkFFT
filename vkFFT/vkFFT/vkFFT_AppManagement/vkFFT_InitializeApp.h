@@ -29,6 +29,7 @@
 #include "vkFFT/vkFFT_AppManagement/vkFFT_DeleteApp.h"
 #include "vkFFT/vkFFT_PlanManagement/vkFFT_Plans/vkFFT_Plan_FFT.h"
 #include "vkFFT/vkFFT_PlanManagement/vkFFT_Plans/vkFFT_Plan_R2C.h"
+
 static inline VkFFTResult initializeBluesteinAutoPadding(VkFFTApplication* app) {
 	VkFFTResult resFFT = VKFFT_SUCCESS;
 	if (!app->configuration.useCustomBluesteinPaddingPattern) {
@@ -479,7 +480,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 	app->configuration.fence = inputLaunchConfiguration.fence;
 
 	VkPhysicalDeviceProperties physicalDeviceProperties = { 0 };
-	vkGetPhysicalDeviceProperties(app->configuration.physicalDevice[0], &physicalDeviceProperties);
+	app->dispatcher.vkGetPhysicalDeviceProperties(app->configuration.physicalDevice[0], &physicalDeviceProperties);
 	app->configuration.maxThreadsNum = physicalDeviceProperties.limits.maxComputeWorkGroupInvocations;
 	if (physicalDeviceProperties.vendorID == 0x8086) app->configuration.maxThreadsNum = 256; //Intel fix
 	app->configuration.maxComputeWorkGroupCount[0] = physicalDeviceProperties.limits.maxComputeWorkGroupCount[0];
@@ -1465,16 +1466,66 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 	//pfUINT initSharedMemory = app->configuration.sharedMemorySize;
 	return resFFT;
 }
+static inline void initializeDispatcher(VkFFTApplication* app) {
+#define VKFFT_INIT_UFN(fn, def) if (!(app->dispatcher.fn)) app->dispatcher.fn = &def
+#define VKFFT_INIT_VKFN(fn) if (!(app->dispatcher.fn)) app->dispatcher.fn = &fn
+	// TODO
+
+	VKFFT_INIT_VKFN(vkGetPhysicalDeviceProperties);
+	VKFFT_INIT_VKFN(vkGetPhysicalDeviceMemoryProperties);
+
+	VKFFT_INIT_VKFN(vkQueueSubmit);
+	VKFFT_INIT_VKFN(vkResetFences);
+	VKFFT_INIT_VKFN(vkWaitForFences);
+	VKFFT_INIT_VKFN(vkCreateShaderModule);
+	VKFFT_INIT_VKFN(vkDestroyShaderModule);
+	VKFFT_INIT_VKFN(vkCreateComputePipelines);
+	VKFFT_INIT_VKFN(vkDestroyPipeline);
+	VKFFT_INIT_VKFN(vkCreatePipelineLayout);
+	VKFFT_INIT_VKFN(vkDestroyPipelineLayout);
+	VKFFT_INIT_VKFN(vkCreateDescriptorSetLayout);
+	VKFFT_INIT_VKFN(vkDestroyDescriptorSetLayout);
+	VKFFT_INIT_VKFN(vkCreateDescriptorPool);
+	VKFFT_INIT_VKFN(vkDestroyDescriptorPool);
+	VKFFT_INIT_VKFN(vkAllocateDescriptorSets);
+	VKFFT_INIT_VKFN(vkUpdateDescriptorSets);
+	VKFFT_INIT_VKFN(vkAllocateCommandBuffers);
+	VKFFT_INIT_VKFN(vkFreeCommandBuffers);
+	VKFFT_INIT_VKFN(vkBeginCommandBuffer);
+	VKFFT_INIT_VKFN(vkEndCommandBuffer);
+	VKFFT_INIT_VKFN(vkCmdBindPipeline);
+	VKFFT_INIT_VKFN(vkCmdBindDescriptorSets);
+	VKFFT_INIT_VKFN(vkCmdDispatch);
+	VKFFT_INIT_VKFN(vkCmdCopyBuffer);
+	VKFFT_INIT_VKFN(vkCmdPipelineBarrier);
+	VKFFT_INIT_VKFN(vkCmdPushConstants);
+	VKFFT_INIT_VKFN(vkCreateBuffer);
+	VKFFT_INIT_VKFN(vkGetBufferMemoryRequirements);
+	VKFFT_INIT_VKFN(vkAllocateMemory);
+	VKFFT_INIT_VKFN(vkBindBufferMemory);
+	VKFFT_INIT_VKFN(vkDestroyBuffer);
+	VKFFT_INIT_VKFN(vkFreeMemory);
+	VKFFT_INIT_VKFN(vkMapMemory);
+	VKFFT_INIT_VKFN(vkUnmapMemory);
+
+	VKFFT_INIT_UFN(fnAllocateBuffer, allocateBufferVulkanImpl);
+	VKFFT_INIT_UFN(fnDestroyBuffer, destroyBufferVulkanImpl);
+	VKFFT_INIT_UFN(fnMapBuffer, mapBufferImpl);
+	VKFFT_INIT_UFN(fnUnmapBuffer, unmapBufferImpl);
+
+#undef VKFFT_INIT_UFN
+#undef VKFFT_INIT_VKFN
+}
 static inline VkFFTResult initializeVkFFT(VkFFTApplication* app, VkFFTConfiguration inputLaunchConfiguration) {
-	
 	VkFFTResult resFFT = VKFFT_SUCCESS;
-    unsigned char *test = (unsigned char*)app;
-    if (app == 0){
-    	return VKFFT_ERROR_EMPTY_app;
-    }
+  unsigned char *test = (unsigned char*)app;
+  if (app == 0){
+    return VKFFT_ERROR_EMPTY_app;
+  }
 	if (memcmp(test, test + 1, sizeof(VkFFTApplication) - 1) != 0){
 		return VKFFT_ERROR_NONZERO_APP_INITIALIZATION;
 	}
+	initializeDispatcher(app);
 	resFFT = setConfigurationVkFFT(app, inputLaunchConfiguration);
 	if (resFFT != VKFFT_SUCCESS) {
 		deleteVkFFT(app);
@@ -1619,10 +1670,10 @@ static inline VkFFTResult initializeVkFFT(VkFFTApplication* app, VkFFTConfigurat
 			deleteVkFFT(app);
 			return VKFFT_ERROR_MALLOC_FAILED;
 		}
-		resFFT = allocateBufferVulkan(app, app->configuration.tempBuffer, &app->configuration.tempBufferDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, app->configuration.tempBufferSize[0]);
-		if (resFFT != VKFFT_SUCCESS) {
+		res = allocateBufferVulkan(app, app->configuration.tempBuffer, &app->configuration.tempBufferDeviceMemory, &app->configuration.tempBufferDeviceMemoryOffset, &app->configuration.tempBufferUserData, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, app->configuration.tempBufferSize[0]);
+		if (res != VK_SUCCESS) {
 			deleteVkFFT(app);
-			return resFFT;
+			return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 		}
 #elif(VKFFT_BACKEND==1)
 		app->configuration.tempBuffer = (void**)malloc(sizeof(void*));

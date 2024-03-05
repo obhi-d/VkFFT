@@ -27,7 +27,7 @@
 
 static inline VkFFTResult VkFFTSync(VkFFTApplication* app) {
 #if(VKFFT_BACKEND==0)
-    vkCmdPipelineBarrier(app->configuration.commandBuffer[0], VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, app->configuration.memory_barrier, 0, 0, 0, 0);
+    app->dispatcher.vkCmdPipelineBarrier(app->configuration.commandBuffer[0], VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, app->configuration.memory_barrier, 0, 0, 0, 0);
 #elif(VKFFT_BACKEND==1)
     if (app->configuration.num_streams > 1) {
         cudaError_t res = cudaSuccess;
@@ -117,8 +117,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                 if (resFFT != VKFFT_SUCCESS) return resFFT;
                 pfUINT maxCoordinate = ((app->configuration.matrixConvolution > 1) && (app->configuration.performConvolution) && (app->configuration.FFTdim == 1) && (l == 0)) ? 1 : app->configuration.coordinateFeatures;
 #if(VKFFT_BACKEND==0)
-                vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                 pfUINT dispatchBlock[3];
                 if (l == 0) {
@@ -162,8 +162,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                     if (resFFT != VKFFT_SUCCESS) return resFFT;
                     pfUINT maxCoordinate = ((app->configuration.matrixConvolution > 1) && (app->configuration.performConvolution) && (app->configuration.FFTdim == 1)) ? 1 : app->configuration.coordinateFeatures;
 #if(VKFFT_BACKEND==0)
-                    vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                    vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                    app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                    app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                     pfUINT dispatchBlock[3];
                     if (l == 0) {
@@ -209,8 +209,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                 pfUINT maxCoordinate = ((app->configuration.matrixConvolution > 1) && (app->configuration.performConvolution) && (app->configuration.FFTdim == 1)) ? 1 : app->configuration.coordinateFeatures;
                 
 #if(VKFFT_BACKEND==0)
-                vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                 pfUINT dispatchBlock[3];
                 
@@ -241,8 +241,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                         pfUINT maxCoordinate = ((app->configuration.matrixConvolution > 1) && (l == 0)) ? 1 : app->configuration.coordinateFeatures;
                         
 #if(VKFFT_BACKEND==0)
-                        vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                        vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                        app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                        app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                         pfUINT dispatchBlock[3];
                         dispatchBlock[0] = (pfUINT)pfceil(app->localFFTPlan->actualFFTSizePerAxis[i][0] / (double)axis->axisBlock[0] * app->localFFTPlan->actualFFTSizePerAxis[i][i] / (double)axis->specializationConstants.fftDim.data.i);
@@ -269,8 +269,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                         if (resFFT != VKFFT_SUCCESS) return resFFT;
                         
 #if(VKFFT_BACKEND==0)
-                        vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                        vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                        app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                        app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                         pfUINT dispatchBlock[3];
                         
@@ -296,8 +296,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                             resFFT = VkFFTUpdateBufferSet(app, app->localFFTPlan, axis, i, l, 0);
                             if (resFFT != VKFFT_SUCCESS) return resFFT;
 #if(VKFFT_BACKEND==0)
-                            vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                            vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                            app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                            app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                             pfUINT dispatchBlock[3];
                             dispatchBlock[0] = (pfUINT)pfceil(app->localFFTPlan->actualFFTSizePerAxis[i][0] / (double)axis->axisBlock[0] * app->localFFTPlan->actualFFTSizePerAxis[i][i] / (double)axis->specializationConstants.fftDim.data.i);
@@ -333,8 +333,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                     if (resFFT != VKFFT_SUCCESS) return resFFT;
 
 #if(VKFFT_BACKEND==0)
-                    vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                    vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                    app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                    app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                     pfUINT dispatchBlock[3];
                     dispatchBlock[0] = (pfUINT)pfceil(app->localFFTPlan_inverse->actualFFTSizePerAxis[i][0] / (double)axis->axisBlock[0] * app->localFFTPlan_inverse->actualFFTSizePerAxis[i][i] / (double)axis->specializationConstants.fftDim.data.i);
@@ -359,8 +359,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                 if (resFFT != VKFFT_SUCCESS) return resFFT;
 
 #if(VKFFT_BACKEND==0)
-                vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                 pfUINT dispatchBlock[3];
 
@@ -387,8 +387,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                 if (resFFT != VKFFT_SUCCESS) return resFFT;
 
 #if(VKFFT_BACKEND==0)
-                vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                 pfUINT dispatchBlock[3];
                 if (i==1){
@@ -444,8 +444,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                 if (resFFT != VKFFT_SUCCESS) return resFFT;
 
 #if(VKFFT_BACKEND==0)
-                vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                 pfUINT dispatchBlock[3];
                 dispatchBlock[0] = (pfUINT)pfceil(app->localFFTPlan_inverse->actualFFTSizePerAxis[0][0] / (double)axis->axisBlock[0] * app->localFFTPlan_inverse->actualFFTSizePerAxis[0][1] / (double)axis->specializationConstants.fftDim.data.i);
@@ -475,8 +475,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                     if (resFFT != VKFFT_SUCCESS) return resFFT;
 
 #if(VKFFT_BACKEND==0)
-                    vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                    vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                    app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                    app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                     pfUINT dispatchBlock[3];
                     dispatchBlock[0] = (pfUINT)pfceil(app->localFFTPlan_inverse->actualFFTSizePerAxis[i][0]  / (double)axis->axisBlock[0] * app->localFFTPlan_inverse->actualFFTSizePerAxis[i][i] / (double)axis->specializationConstants.fftDim.data.i);
@@ -503,8 +503,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                         resFFT = VkFFTUpdateBufferSet(app, app->localFFTPlan_inverse, axis, i, l, 1);
                         if (resFFT != VKFFT_SUCCESS) return resFFT;
 #if(VKFFT_BACKEND==0)
-                        vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                        vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                        app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                        app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                         pfUINT dispatchBlock[3];
                         dispatchBlock[0] = (pfUINT)pfceil(app->localFFTPlan_inverse->actualFFTSizePerAxis[i][0]  / (double)axis->axisBlock[0] * app->localFFTPlan_inverse->actualFFTSizePerAxis[i][i] / (double)axis->specializationConstants.fftDim.data.i);
@@ -533,8 +533,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                 if (resFFT != VKFFT_SUCCESS) return resFFT;
 
 #if(VKFFT_BACKEND==0)
-                vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                 pfUINT dispatchBlock[3];
 
@@ -562,8 +562,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                 resFFT = VkFFTUpdateBufferSet(app, app->localFFTPlan_inverse, axis, 0, l, 1);
                 if (resFFT != VKFFT_SUCCESS) return resFFT;
 #if(VKFFT_BACKEND==0)
-                vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                 pfUINT dispatchBlock[3];
                 if (l == 0) {
@@ -607,8 +607,8 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
                     if (resFFT != VKFFT_SUCCESS) return resFFT;
 
 #if(VKFFT_BACKEND==0)
-                    vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-                    vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+                    app->dispatcher.vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+                    app->dispatcher.vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 #endif
                     pfUINT dispatchBlock[3];
                     if (l == 0) {

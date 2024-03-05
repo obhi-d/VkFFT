@@ -23,6 +23,8 @@
 #define VKFFT_DELETEPLAN_H
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
 
+void destroyBufferVulkan(VkFFTApplication* app, VkBuffer* buffer, VkDeviceMemory* memory, VkDeviceSize* offset, void** userData);
+
 static inline void deleteAxis(VkFFTApplication* app, VkFFTAxis* axis, int isInverseBluesteinAxes) {
 	if (axis->specializationConstants.numRaderPrimes && (!isInverseBluesteinAxes)) {
 		free(axis->specializationConstants.raderContainer);
@@ -32,28 +34,23 @@ static inline void deleteAxis(VkFFTApplication* app, VkFFTAxis* axis, int isInve
 #if(VKFFT_BACKEND==0)
 	if ((app->configuration.useLUT == 1) && (!axis->referenceLUT)) {
 		if (axis->bufferLUT != 0) {
-			vkDestroyBuffer(app->configuration.device[0], axis->bufferLUT, 0);
-			axis->bufferLUT = 0;
-		}
-		if (axis->bufferLUTDeviceMemory != 0) {
-			vkFreeMemory(app->configuration.device[0], axis->bufferLUTDeviceMemory, 0);
-			axis->bufferLUTDeviceMemory = 0;
+			destroyBufferVulkan(app, &axis->bufferLUT, &axis->bufferLUTDeviceMemory, &axis->bufferLUTOffset, &axis->bufferLUTUserData);
 		}
 	}
 	if (axis->descriptorPool != 0) {
-		vkDestroyDescriptorPool(app->configuration.device[0], axis->descriptorPool, 0);
+		app->dispatcher.vkDestroyDescriptorPool(app->configuration.device[0], axis->descriptorPool, 0);
 		axis->descriptorPool = 0;
 	}
 	if (axis->descriptorSetLayout != 0) {
-		vkDestroyDescriptorSetLayout(app->configuration.device[0], axis->descriptorSetLayout, 0);
+		app->dispatcher.vkDestroyDescriptorSetLayout(app->configuration.device[0], axis->descriptorSetLayout, 0);
 		axis->descriptorSetLayout = 0;
 	}
 	if (axis->pipelineLayout != 0) {
-		vkDestroyPipelineLayout(app->configuration.device[0], axis->pipelineLayout, 0);
+		app->dispatcher.vkDestroyPipelineLayout(app->configuration.device[0], axis->pipelineLayout, 0);
 		axis->pipelineLayout = 0;
 	}
 	if (axis->pipeline != 0) {
-		vkDestroyPipeline(app->configuration.device[0], axis->pipeline, 0);
+		app->dispatcher.vkDestroyPipeline(app->configuration.device[0], axis->pipeline, 0);
 		axis->pipeline = 0;
 	}
 #elif(VKFFT_BACKEND==1)

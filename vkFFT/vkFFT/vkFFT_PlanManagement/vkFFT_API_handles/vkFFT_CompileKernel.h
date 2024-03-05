@@ -256,7 +256,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 	VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 	createInfo.pCode = code;
 	createInfo.codeSize = codeSize;
-	res = vkCreateShaderModule(app->configuration.device[0], &createInfo, 0, &pipelineShaderStageCreateInfo.module);
+	res = app->dispatcher.vkCreateShaderModule(app->configuration.device[0], &createInfo, 0, &pipelineShaderStageCreateInfo.module);
 	if (res != VK_SUCCESS) {
 		free(code0);
 		code0 = 0;
@@ -274,7 +274,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 		pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
 		pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
 	}
-	res = vkCreatePipelineLayout(app->configuration.device[0], &pipelineLayoutCreateInfo, 0, &axis->pipelineLayout);
+	res = app->dispatcher.vkCreatePipelineLayout(app->configuration.device[0], &pipelineLayoutCreateInfo, 0, &axis->pipelineLayout);
 	if (res != VK_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_CREATE_PIPELINE_LAYOUT;
@@ -284,14 +284,14 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 	computePipelineCreateInfo.stage = pipelineShaderStageCreateInfo;
 	computePipelineCreateInfo.layout = axis->pipelineLayout;
 	if (app->configuration.pipelineCache)
-		res = vkCreateComputePipelines(app->configuration.device[0], app->configuration.pipelineCache[0], 1, &computePipelineCreateInfo, 0, &axis->pipeline);
+		res = app->dispatcher.vkCreateComputePipelines(app->configuration.device[0], app->configuration.pipelineCache[0], 1, &computePipelineCreateInfo, 0, &axis->pipeline);
 	else
-		res = vkCreateComputePipelines(app->configuration.device[0], 0, 1, &computePipelineCreateInfo, 0, &axis->pipeline);
+		res = app->dispatcher.vkCreateComputePipelines(app->configuration.device[0], 0, 1, &computePipelineCreateInfo, 0, &axis->pipeline);
 	if (res != VK_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_CREATE_PIPELINE;
 	}
-	vkDestroyShaderModule(app->configuration.device[0], pipelineShaderStageCreateInfo.module, 0);
+	app->dispatcher.vkDestroyShaderModule(app->configuration.device[0], pipelineShaderStageCreateInfo.module, 0);
 	if (!app->configuration.saveApplicationToString) {
 		free(code);
 		code = 0;

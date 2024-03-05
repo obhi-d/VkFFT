@@ -25,6 +25,8 @@
 #include "vkFFT/vkFFT_PlanManagement/vkFFT_API_handles/vkFFT_DeletePlan.h"
 #include "vkFFT/vkFFT_PlanManagement/vkFFT_API_handles/vkFFT_UpdateBuffers.h"
 
+void destroyBufferVulkan(VkFFTApplication* app, VkBuffer* buffer, VkDeviceMemory* memory, VkDeviceSize* offset, void** userData);
+
 static inline void deleteVkFFT(VkFFTApplication* app) {
 #if(VKFFT_BACKEND==0)
 	if (app->configuration.isCompilerInitialized) {
@@ -71,12 +73,10 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 			app->configuration.allocateTempBuffer = 0;
 #if(VKFFT_BACKEND==0)
 			if (app->configuration.tempBuffer[0] != 0) {
-				vkDestroyBuffer(app->configuration.device[0], app->configuration.tempBuffer[0], 0);
-				app->configuration.tempBuffer[0] = 0;
-			}
-			if (app->configuration.tempBufferDeviceMemory != 0) {
-				vkFreeMemory(app->configuration.device[0], app->configuration.tempBufferDeviceMemory, 0);
-				app->configuration.tempBufferDeviceMemory = 0;
+				destroyBufferVulkan(app, &app->configuration.tempBuffer[0],
+					&app->configuration.tempBufferDeviceMemory,
+					&app->configuration.tempBufferDeviceMemoryOffset,
+					&app->configuration.tempBufferUserData);
 			}
 #elif(VKFFT_BACKEND==1)
 			cudaError_t res_t = cudaSuccess;
@@ -122,10 +122,10 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 			for (pfUINT j = 0; j < 4; j++) {
 				if (app->bufferRaderUintLUT[i][j]) {
 #if(VKFFT_BACKEND==0)
-					vkDestroyBuffer(app->configuration.device[0], app->bufferRaderUintLUT[i][j], 0);
-					app->bufferRaderUintLUT[i][j] = 0;
-					vkFreeMemory(app->configuration.device[0], app->bufferRaderUintLUTDeviceMemory[i][j], 0);
-					app->bufferRaderUintLUTDeviceMemory[i][j] = 0;
+					destroyBufferVulkan(app, &app->bufferRaderUintLUT[i][j],
+						&app->bufferRaderUintLUTDeviceMemory[i][j],
+						&app->bufferRaderUintLUTOffset[i][j],
+						&app->bufferRaderUintLUTUserData[i][j]);
 #elif(VKFFT_BACKEND==1)
 					cudaError_t res_t = cudaSuccess;
 					res_t = cudaFree(app->bufferRaderUintLUT[i][j]);
@@ -155,28 +155,22 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 		if (app->useBluesteinFFT[i]) {
 #if(VKFFT_BACKEND==0)
 			if (app->bufferBluestein[i] != 0) {
-				vkDestroyBuffer(app->configuration.device[0], app->bufferBluestein[i], 0);
-				app->bufferBluestein[i] = 0;
-			}
-			if (app->bufferBluesteinDeviceMemory[i] != 0) {
-				vkFreeMemory(app->configuration.device[0], app->bufferBluesteinDeviceMemory[i], 0);
-				app->bufferBluesteinDeviceMemory[i] = 0;
+				destroyBufferVulkan(app, &app->bufferBluestein[i],
+					&app->bufferBluesteinDeviceMemory[i],
+					&app->bufferBluesteinOffset[i],
+					&app->bufferBluesteinUserData[i]);
 			}
 			if (app->bufferBluesteinFFT[i] != 0) {
-				vkDestroyBuffer(app->configuration.device[0], app->bufferBluesteinFFT[i], 0);
-				app->bufferBluesteinFFT[i] = 0;
-			}
-			if (app->bufferBluesteinFFTDeviceMemory[i] != 0) {
-				vkFreeMemory(app->configuration.device[0], app->bufferBluesteinFFTDeviceMemory[i], 0);
-				app->bufferBluesteinFFTDeviceMemory[i] = 0;
+				destroyBufferVulkan(app, &app->bufferBluesteinFFT[i],
+					&app->bufferBluesteinFFTDeviceMemory[i],
+					&app->bufferBluesteinFFTOffset[i],
+					&app->bufferBluesteinFFTUserData[i]);
 			}
 			if (app->bufferBluesteinIFFT[i] != 0) {
-				vkDestroyBuffer(app->configuration.device[0], app->bufferBluesteinIFFT[i], 0);
-				app->bufferBluesteinIFFT[i] = 0;
-			}
-			if (app->bufferBluesteinIFFTDeviceMemory[i] != 0) {
-				vkFreeMemory(app->configuration.device[0], app->bufferBluesteinIFFTDeviceMemory[i], 0);
-				app->bufferBluesteinIFFTDeviceMemory[i] = 0;
+				destroyBufferVulkan(app, &app->bufferBluesteinIFFT[i],
+					&app->bufferBluesteinIFFTDeviceMemory[i],
+					&app->bufferBluesteinIFFTOffset[i],
+					&app->bufferBluesteinIFFTUserData[i]);
 			}
 #elif(VKFFT_BACKEND==1)
 			cudaError_t res_t = cudaSuccess;

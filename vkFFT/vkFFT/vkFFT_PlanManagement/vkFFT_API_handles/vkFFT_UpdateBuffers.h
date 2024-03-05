@@ -291,7 +291,7 @@ static inline VkFFTResult VkFFTConfigureDescriptors(VkFFTApplication* app, VkFFT
 	descriptorPoolCreateInfo.poolSizeCount = 1;
 	descriptorPoolCreateInfo.pPoolSizes = &descriptorPoolSize;
 	descriptorPoolCreateInfo.maxSets = 1;
-	res = vkCreateDescriptorPool(app->configuration.device[0], &descriptorPoolCreateInfo, 0, &axis->descriptorPool);
+	res = app->dispatcher.vkCreateDescriptorPool(app->configuration.device[0], &descriptorPoolCreateInfo, 0, &axis->descriptorPool);
 	if (res != VK_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_CREATE_DESCRIPTOR_POOL;
@@ -314,7 +314,7 @@ static inline VkFFTResult VkFFTConfigureDescriptors(VkFFTApplication* app, VkFFT
 	descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)axis->numBindings;
 	descriptorSetLayoutCreateInfo.pBindings = descriptorSetLayoutBindings;
 
-	res = vkCreateDescriptorSetLayout(app->configuration.device[0], &descriptorSetLayoutCreateInfo, 0, &axis->descriptorSetLayout);
+	res = app->dispatcher.vkCreateDescriptorSetLayout(app->configuration.device[0], &descriptorSetLayoutCreateInfo, 0, &axis->descriptorSetLayout);
 	if (res != VK_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_CREATE_DESCRIPTOR_SET_LAYOUT;
@@ -325,7 +325,7 @@ static inline VkFFTResult VkFFTConfigureDescriptors(VkFFTApplication* app, VkFFT
 	descriptorSetAllocateInfo.descriptorPool = axis->descriptorPool;
 	descriptorSetAllocateInfo.descriptorSetCount = 1;
 	descriptorSetAllocateInfo.pSetLayouts = &axis->descriptorSetLayout;
-	res = vkAllocateDescriptorSets(app->configuration.device[0], &descriptorSetAllocateInfo, &axis->descriptorSet);
+	res = app->dispatcher.vkAllocateDescriptorSets(app->configuration.device[0], &descriptorSetAllocateInfo, &axis->descriptorSet);
 	if (res != VK_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_ALLOCATE_DESCRIPTOR_SETS;
@@ -583,7 +583,7 @@ static inline VkFFTResult VkFFTConfigureDescriptorsR2CMultiUploadDecomposition(V
 	descriptorPoolCreateInfo.poolSizeCount = 1;
 	descriptorPoolCreateInfo.pPoolSizes = &descriptorPoolSize;
 	descriptorPoolCreateInfo.maxSets = 1;
-	res = vkCreateDescriptorPool(app->configuration.device[0], &descriptorPoolCreateInfo, 0, &axis->descriptorPool);
+	res = app->dispatcher.vkCreateDescriptorPool(app->configuration.device[0], &descriptorPoolCreateInfo, 0, &axis->descriptorPool);
 	if (res != VK_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_CREATE_DESCRIPTOR_POOL;
@@ -606,7 +606,7 @@ static inline VkFFTResult VkFFTConfigureDescriptorsR2CMultiUploadDecomposition(V
 	descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)axis->numBindings;
 	descriptorSetLayoutCreateInfo.pBindings = descriptorSetLayoutBindings;
 
-	res = vkCreateDescriptorSetLayout(app->configuration.device[0], &descriptorSetLayoutCreateInfo, 0, &axis->descriptorSetLayout);
+	res = app->dispatcher.vkCreateDescriptorSetLayout(app->configuration.device[0], &descriptorSetLayoutCreateInfo, 0, &axis->descriptorSetLayout);
 	if (res != VK_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_CREATE_DESCRIPTOR_SET_LAYOUT;
@@ -617,7 +617,7 @@ static inline VkFFTResult VkFFTConfigureDescriptorsR2CMultiUploadDecomposition(V
 	descriptorSetAllocateInfo.descriptorPool = axis->descriptorPool;
 	descriptorSetAllocateInfo.descriptorSetCount = 1;
 	descriptorSetAllocateInfo.pSetLayouts = &axis->descriptorSetLayout;
-	res = vkAllocateDescriptorSets(app->configuration.device[0], &descriptorSetAllocateInfo, &axis->descriptorSet);
+	res = app->dispatcher.vkAllocateDescriptorSets(app->configuration.device[0], &descriptorSetAllocateInfo, &axis->descriptorSet);
 	if (res != VK_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_ALLOCATE_DESCRIPTOR_SETS;
@@ -1183,7 +1183,7 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 					writeDescriptorSet.descriptorType = descriptorType;
 					writeDescriptorSet.descriptorCount = 1;
 					writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
-					vkUpdateDescriptorSets(app->configuration.device[0], 1, &writeDescriptorSet, 0, 0);
+					app->dispatcher.vkUpdateDescriptorSets(app->configuration.device[0], 1, &writeDescriptorSet, 0, 0);
 				}
 #endif
 			}
@@ -1562,7 +1562,7 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 					writeDescriptorSet.descriptorType = descriptorType;
 					writeDescriptorSet.descriptorCount = 1;
 					writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
-					vkUpdateDescriptorSets(app->configuration.device[0], 1, &writeDescriptorSet, 0, 0);
+					app->dispatcher.vkUpdateDescriptorSets(app->configuration.device[0], 1, &writeDescriptorSet, 0, 0);
 				}
 #endif
 			}
